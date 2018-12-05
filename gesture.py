@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import math
+from scipy import ndimage
 cap = cv2.VideoCapture(0)
      
 while(1):
@@ -16,9 +17,9 @@ while(1):
         roi=frame[100:300, 100:300]
         
         
-        cv2.rectangle(frame,(100,100),(300,300),(0,255,0),0)    
+        cv2.rectangle(frame,(100,100),(300,300),(0,255,0),0)
         hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-        
+        # print(hsv[100,100], "end")
         
          
     # define range of skin color in HSV
@@ -34,23 +35,52 @@ while(1):
         mask = cv2.dilate(mask,kernel,iterations = 4)
         
     #blur the image
-        mask = cv2.GaussianBlur(mask,(5,5),100) 
-        
-        
+        mask = cv2.GaussianBlur(mask,(5,5),100)
+        #todo objs = ndimage.find_objects(mask)
+        #todo print(objs[0])
+        #todo mROI=[objs[0][0].start,objs[0][0].stop,objs[0][1].start,objs[0][1].stop]#ymin,ymax,xmin,xmax
         
     #find contours
         _,contours,hierarchy= cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+        contours = sorted(contours, key=lambda x: cv2.contourArea(x), reverse = True)
+        #cv2.drawContours(mask, contours,0, color=(80))
+        #todo print(mask[0].start, mask[0].stop, mask[1].start, mask[1].stop)
     
    #find contour of max area(hand)
-        cnt = max(contours, key = lambda x: cv2.contourArea(x))
+        #print([cv2.contourArea(x) for x in cnts], 'hiiiii')
+        cnt = contours[0]
+        cnt2 = contours[1] if len(contours) >=2 else None
+        areacnt2 = cv2.contourArea(cnt2) if len(contours) >=2 else None
+        #x,y,w,h = cv2.boundingRect(cnt2)
+        #cv2.rectangle(mask,(x,y),(x+w,y+h),(200),5)
         
     #approx the contour a little
         epsilon = 0.0005*cv2.arcLength(cnt,True)
         approx= cv2.approxPolyDP(cnt,epsilon,True)
-       
-        
+
     #make convex hull around hand
         hull = cv2.convexHull(cnt)
+
+        # rect = cv2.minAreaRect(cnt)
+        # box = cv2.boxPoints(rect)
+        # box = np.intp(box)
+        # cv2.drawContours(mask,[box],0,(150),2)
+
+        # (x,y),radius = cv2.minEnclosingCircle(cnt)
+        # center = (int(x),int(y))
+        # radius = int(radius)
+        # print(center,radius)
+        # print(mask.shape, mask.dtype)
+        # cv2.circle(mask,center,radius,(100),2)
+        x,y,w,h = cv2.boundingRect(cnt)
+        focused = mask[y:y+h,x:x+w]
+        cv2.rectangle(mask,(x,y),(x+w,y+h),(100),5)
+        cv2.imshow("focuss",focused)
+        f_widthHightRatio =  h / w
+        print('height,', h, 'w=', w)
+        print(f_widthHightRatio)
+        #resized = cv2.resize(focused, (200, 200))
+        #cv2.imshow("resized",resized)
         
      #define area of hull and area of hand
         areahull = cv2.contourArea(hull)
@@ -97,49 +127,69 @@ while(1):
             #draw lines around hand
             cv2.line(roi,start, end, [0,255,0], 2)
             
-            
-        l+=1
-        
+
+         #//l+=1
         #print corresponding gestures which are in their ranges
         font = cv2.FONT_HERSHEY_SIMPLEX
-        if l==1:
-            if areacnt<2000:
-                cv2.putText(frame,'Put hand in the box',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-            else:
-                if arearatio<12:
-                    cv2.putText(frame,'0',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-                elif arearatio<17.5:
-                    cv2.putText(frame,'Best of luck',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-                   
-                else:
-                    cv2.putText(frame,'1',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-                    
-        elif l==2:
-            cv2.putText(frame,'2',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        if l >= 2:
+            cv2.putText(frame,'moving',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        elif f_widthHightRatio > 2 :
+            cv2.putText(frame,'pause',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        elif areacnt2 != None and areacnt / areacnt2 > 20 :
+            cv2.putText(frame,'right click',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        elif f_widthHightRatio < 1.4 and f_widthHightRatio > 0.6 and arearatio < 20:
+            cv2.putText(frame,'left click',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        else:
+            cv2.putText(frame,'NO SHAPE',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+
+
+
+
+        # # font = cv2.FONT_HERSHEY_SIMPLEX
+        # # if l >= 3:
+        # #     cv2.putText(frame,'moving',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        # # elif l >= 1 and areahull / (mask.shape[0] * mask.shape[1]) < 0.50:
+        # #     cv2.putText(frame,'right click',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        # # else:
+        # #     if (areahull / (mask.shape[0] * mask.shape[1]) > 0.50):
+        # #         cv2.putText(frame,'left click',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        # #     else:
+        # #         cv2.putText(frame,'pause',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+
+
+            #//cv2.putText(frame,'lclick or | {} {} {}'.format(areacnt, areahull, arearatio),(0,50), font, 1, (0,0,255), 1, cv2.LINE_AA)
             
-        elif l==3:
-         
-              if arearatio<27:
-                    cv2.putText(frame,'3',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-              else:
-                    cv2.putText(frame,'ok',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-                    
-        elif l==4:
-            cv2.putText(frame,'4',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-            
-        elif l==5:
-            cv2.putText(frame,'5',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-            
-        elif l==6:
-            cv2.putText(frame,'reposition',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-            
-        else :
-            cv2.putText(frame,'reposition',(10,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-            
-        #show the windows
+
+
+        #//  l+=1
+        #//  #print corresponding gestures which are in their ranges
+        #//  font = cv2.FONT_HERSHEY_SIMPLEX
+        #//  if l==1:
+        #//      if areacnt<2000:
+        #//          cv2.putText(frame,'Put hand in the box',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        #//      else:
+        #//          if arearatio<12:
+        #//              cv2.putText(frame,'0',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        #//          elif arearatio<17.5:
+        #//              cv2.putText(frame,'Best of luck',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)         
+        #//          else:
+        #//              cv2.putText(frame,'1',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)          
+        #//  elif l==2:
+        #//      cv2.putText(frame,'2',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)  
+        #//  elif l==3:
+        #//        if arearatio<27:
+        #//              cv2.putText(frame,'3',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+        #//        else:
+        #//              cv2.putText(frame,'ok',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA) 
+        #//  elif l >= 3:
+        #//      cv2.putText(frame,'moving',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
+
+        #// show the windows
         cv2.imshow('mask',mask)
         cv2.imshow('frame',frame)
-    except:
+        #cv2.imshow('mroi',mROI)
+    except Exception as e:
+        print(e)
         pass
         
     
