@@ -3,7 +3,7 @@ import numpy as np
 import math
 from scipy import ndimage
 cap = cv2.VideoCapture(0)
-     
+
 while(1):
         
     try:  #an error comes if it does not find anything in window as it cannot find contour of max area
@@ -36,15 +36,13 @@ while(1):
         
     #blur the image
         mask = cv2.GaussianBlur(mask,(5,5),100)
-        #todo objs = ndimage.find_objects(mask)
-        #todo print(objs[0])
-        #todo mROI=[objs[0][0].start,objs[0][0].stop,objs[0][1].start,objs[0][1].stop]#ymin,ymax,xmin,xmax
+        
+
         
     #find contours
         _,contours,hierarchy= cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         contours = sorted(contours, key=lambda x: cv2.contourArea(x), reverse = True)
-        #cv2.drawContours(mask, contours,0, color=(80))
-        #todo print(mask[0].start, mask[0].stop, mask[1].start, mask[1].stop)
+        cv2.drawContours(roi, contours,0, color=(255,0,0))
     
    #find contour of max area(hand)
         #print([cv2.contourArea(x) for x in cnts], 'hiiiii')
@@ -142,49 +140,6 @@ while(1):
         else:
             cv2.putText(frame,'NO SHAPE',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
 
-
-
-
-        # # font = cv2.FONT_HERSHEY_SIMPLEX
-        # # if l >= 3:
-        # #     cv2.putText(frame,'moving',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-        # # elif l >= 1 and areahull / (mask.shape[0] * mask.shape[1]) < 0.50:
-        # #     cv2.putText(frame,'right click',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-        # # else:
-        # #     if (areahull / (mask.shape[0] * mask.shape[1]) > 0.50):
-        # #         cv2.putText(frame,'left click',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-        # #     else:
-        # #         cv2.putText(frame,'pause',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-
-
-            #//cv2.putText(frame,'lclick or | {} {} {}'.format(areacnt, areahull, arearatio),(0,50), font, 1, (0,0,255), 1, cv2.LINE_AA)
-            
-
-
-        #//  l+=1
-        #//  #print corresponding gestures which are in their ranges
-        #//  font = cv2.FONT_HERSHEY_SIMPLEX
-        #//  if l==1:
-        #//      if areacnt<2000:
-        #//          cv2.putText(frame,'Put hand in the box',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-        #//      else:
-        #//          if arearatio<12:
-        #//              cv2.putText(frame,'0',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-        #//          elif arearatio<17.5:
-        #//              cv2.putText(frame,'Best of luck',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)         
-        #//          else:
-        #//              cv2.putText(frame,'1',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)          
-        #//  elif l==2:
-        #//      cv2.putText(frame,'2',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)  
-        #//  elif l==3:
-        #//        if arearatio<27:
-        #//              cv2.putText(frame,'3',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-        #//        else:
-        #//              cv2.putText(frame,'ok',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA) 
-        #//  elif l >= 3:
-        #//      cv2.putText(frame,'moving',(0,50), font, 2, (0,0,255), 3, cv2.LINE_AA)
-
-        #// show the windows
         cv2.imshow('mask',mask)
         cv2.imshow('frame',frame)
         #cv2.imshow('mroi',mROI)
