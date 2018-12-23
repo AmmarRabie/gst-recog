@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 import math
-
+from Gestures import *
+from AsyncControlRepeater import AsyncControlRepeater
 T_RIGHT_CLICK = 50  # max cnt is larger than next larger cnt area with this value => more value means more possible to be recognized over left click and no shape
 T_LEFT_CLICK = 20   # hull area is larger than cnt area with at least this value => less value means more possible to be recognized over no shape
 T_MOVING = 2        # less value means more possible to be moving, [from 1 to 4]
@@ -17,15 +18,15 @@ class GestureRecognizer:
         print('hullCntRatio=',hullCntRatio)
         print('maxTwoCntRatio=',maxTwoCntRatio)
         if numDefects >= 2:
-            return 'PALM'
+            return PALM
         elif lengthRatio > 2:
-            return 'KNIFE'
+            return KNIFE
         elif maxTwoCntRatio < 250 :
-            return 'ZERO'
+            return ZERO
         elif lengthRatio < 1.45 and lengthRatio > 0.8 and hullCntRatio > 0.9 and hullCntRatio < 1.1: # square like
-            return 'FIST'
+            return FIST
         else:
-            return 'NO SHAPE'
+            return NO_GST
 
     def recognize(self, roi, handMask):
         try:
@@ -65,7 +66,7 @@ class GestureRecognizer:
             return self.fromFeatures(f_defects, f_lengthRatio, f_hullCntRatio, f_maxTwoCntRatio), self.__contourCenter__(maxCnt)
         except Exception as e:
             print(e)
-            return 'NO SHAPE', (0,0)
+            return NO_GST, (0,0)
 
     def __preProcessing__(self, mask):
         kernel = np.ones((3,3),np.uint8)
@@ -132,26 +133,39 @@ class GestureRecognizer:
 
    
 
+def adjust_gamma(image, gamma=1.0):
+	# build a lookup table mapping the pixel values [0, 255] to
+	# their adjusted gamma values
+	invGamma = 1.0 / gamma
+	table = np.array([((i / 255.0) ** invGamma) * 255
+		for i in np.arange(0, 256)]).astype("uint8")
+ 
+	# apply gamma correction using the lookup table
+	return cv2.LUT(image, table)
+
 from GameController import GameController
 from ConfigReader import ConfigReader
 if __name__ == "__main__":
     gr = GestureRecognizer()
     cap = cv2.VideoCapture(0)
-    gc = GameController(config=ConfigReader.default())
+    #gc = GameController(config=ConfigReader.default())
+    gc = AsyncControlRepeater(GameController(config=ConfigReader.default()), maxBufferSize=1).start()
     while(True):
         _ , _frame = cap.read()
         _frame = cv2.flip(_frame,1)
+        #_frame = adjust_gamma(_frame, 1.0)
 
         #define region of interest
-        start = 100
-        end = 400
+        start = 50
+        end = 350
         _roi=_frame[start:end, start:end]
         cv2.rectangle(_frame,(start,start),(end,end),(0,255,0),0)
 
-        _hsv = cv2.cvtColor(_roi, cv2.COLOR_BGR2HSV)      
+        _hsv = cv2.cvtColor(_roi, cv2.COLOR_BGR2HSV)
+        #print(_hsv[:50][0:50])
         # define range of skin color in HSV
-        _lower_skin = np.array([0,20,70], dtype=np.uint8)
-        _upper_skin = np.array([20,255,255], dtype=np.uint8) 
+        _lower_skin = np.array([5, 5, 80], dtype=np.uint8)
+        _upper_skin = np.array([60, 250, 250], dtype=np.uint8) 
 
         _mask = cv2.inRange(_hsv, _lower_skin, _upper_skin)
 
@@ -161,10 +175,16 @@ if __name__ == "__main__":
         _font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(_frame, _gesture, (0,50), _font, 2, (0,0,255), 3, cv2.LINE_AA)
 
-        gc.control(_gesture, _center)
         cv2.imshow('frame',_frame)
-        k = cv2.waitKey(5) & 0xFF
-        if k == 27:
+        delay = np.random.randint(20, 25, 1)[0] * 10 # in seconds
+        print('delay', delay)
+        k = cv2.waitKey(1) & 0xFF
+        delay = delay / 1000 # in ms
+
+        #gc.control(_gesture, _center, dt=delay)
+        while(not gc.addGstRecognition(_gesture, _center)):
+            pass
+        if k == 65:
             break
 
     cv2.destroyAllWindows()

@@ -1,7 +1,8 @@
 import pyautogui as pya
-
+from AppLogger import GeneralLogger as GLog
 
 class InputFeeder:
+    TAG = "InputFeeder"
     def __init__(self):
         pass
 
@@ -11,26 +12,31 @@ class InputFeeder:
     def __dy__(self, prev, current):
         return current[1] - prev[1]
 
-    def move(self, prev, current):
+    def move(self, prev, current, duration = 0):
+        print('move')
         dx, dy = self.__dx__(prev, current), self.__dy__(prev, current)
-        print("input feeder: ", dx,dy)
-        pya.moveRel(xOffset=dx*10, yOffset=dy*10, duration=0.1)
+        GLog.d("dx= {}, dy= {}".format(dx, dy), tag=self.TAG)
+        pya.moveRel(xOffset=dx*3, yOffset=dy*3, duration=duration)
 
     def dragLeftClick(self, prev, current):
         dx, dy = self.__dx__(prev, current), self.__dy__(prev, current)
+        GLog.d("dx= {}, dy= {}".format(dx, dy), tag=self.TAG)
         pya.dragRel(xOffset=dx, yOffset=dy, duration=0.001)
 
     def dragRightClick(self, prev, current):
         dx, dy = self.__dx__(prev, current), self.__dy__(prev, current)
+        GLog.d("dx= {}, dy= {}".format(dx, dy), tag=self.TAG)
         pya.dragRel(xOffset=dx, yOffset=dy, duration=0.001, button='right')
 
 
     def scrollH(self, prev, current):
         dx = self.__dx__(prev, current)
+        GLog.d("dx= {}".format(dx), tag=self.TAG)
         pya.scroll(clicks=dx)
 
     def scrollV(self, prev, current):
         dy = self.__dy__(prev, current)
+        GLog.d("dy= {}".format(dy), tag=self.TAG)
         pya.scroll(clicks=dy)
 
     def pressChars(self, chars):

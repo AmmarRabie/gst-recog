@@ -1,6 +1,5 @@
-GESTURES = {
-    "PALM":  "moving",
-    "FIST":       "left click",
-    "KNIFE":      "pause",
-    "ZERO":       "right click",
-}
+FIST = "fist"
+PALM = "palm"
+KNIFE = "knife"
+ZERO = "zero"
+NO_GST = "no shape"
